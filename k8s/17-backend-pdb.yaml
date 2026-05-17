@@ -4,6 +4,15 @@ metadata:
   name: backend-pdb
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # BACKEND DISRUPTION BUDGET
+  #
+  # Keeps at least 4 backend pods available during voluntary
+  # disruptions such as node drains.
+  #
+  # This is paired with 5 backend replicas in 05 and the HPA minimum
+  # in 16 so one pod can be disrupted while capacity remains.
+  # ==========================================================
   minAvailable: 4
   selector:
     matchLabels:

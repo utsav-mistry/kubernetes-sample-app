@@ -4,6 +4,27 @@ metadata:
   name: postgres
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # LEGACY RAW POSTGRES STATEFULSET
+  #
+  # This is the older hand-managed PostgreSQL option.
+  #
+  # Use this only when intentionally running without CNPG:
+  # - 01-postgres-secret.yaml
+  # - 02-postgres-configmap.yaml
+  # - 03-postgres-statefulset.yaml
+  # - 04-postgres-service.yaml
+  #
+  # Current production-style flow uses:
+  # - 20-cnpg-postgres-secret.yaml
+  # - 21-cnpg-postgres-cluster.yaml
+  #
+  # Important:
+  # replicas: 3 here creates three PostgreSQL pods, but this manifest
+  # does not configure streaming replication, failover, backups, or a
+  # real primary/replica topology. postgres-rw in 04 points only to
+  # postgres-0.
+  # ==========================================================
   serviceName: postgres-headless
   replicas: 3
   selector:
@@ -20,11 +41,17 @@ spec:
           ports:
             - containerPort: 5432
               name: postgres
+
+          # Loads POSTGRES_DB/PGDATA from the ConfigMap and
+          # POSTGRES_USER/POSTGRES_PASSWORD from the Secret above.
           envFrom:
             - configMapRef:
                 name: postgres-config
             - secretRef:
                 name: postgres-secret
+
+          # Each StatefulSet pod receives its own PVC from the
+          # volumeClaimTemplates block below.
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
@@ -32,6 +59,8 @@ spec:
     - metadata:
         name: postgres-data
       spec:
+        # ReadWriteOnce is the normal mode for one PostgreSQL pod
+        # mounting one disk at a time.
         accessModes:
           - ReadWriteOnce
         resources:

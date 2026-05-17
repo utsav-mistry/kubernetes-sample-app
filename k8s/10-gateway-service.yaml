@@ -4,6 +4,14 @@ metadata:
   name: nginx-gateway-service
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # GATEWAY INTERNAL SERVICE
+  #
+  # Stable in-cluster endpoint for the nginx gateway pods.
+  #
+  # 11-gateway-ingress.yaml forwards HTTPS/HTTP entry traffic to
+  # this service on port 80.
+  # ==========================================================
   type: ClusterIP
   selector:
     app: nginx-gateway

@@ -4,6 +4,15 @@ metadata:
   name: gateway-pdb
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # GATEWAY DISRUPTION BUDGET
+  #
+  # Keeps at least one nginx gateway pod available during voluntary
+  # disruptions.
+  #
+  # This protects the public entry path because ingress traffic
+  # reaches the application through nginx-gateway-service.
+  # ==========================================================
   minAvailable: 1
   selector:
     matchLabels:

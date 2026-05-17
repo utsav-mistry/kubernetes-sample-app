@@ -4,6 +4,15 @@ metadata:
   name: frontend-pdb
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # FRONTEND DISRUPTION BUDGET
+  #
+  # Keeps at least one frontend pod available during voluntary
+  # disruptions.
+  #
+  # Paired with the 2 frontend replicas in 07 so one pod can move
+  # while the gateway still has a healthy frontend target.
+  # ==========================================================
   minAvailable: 1
   selector:
     matchLabels:

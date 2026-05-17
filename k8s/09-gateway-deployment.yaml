@@ -4,13 +4,37 @@ metadata:
   name: nginx-gateway
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # NGINX GATEWAY DEPLOYMENT
+  #
+  # Runs the internal reverse proxy for the application.
+  #
+  # Traffic path:
+  # browser -> Ingress -> nginx-gateway-service -> gateway pods
+  #
+  # The gateway then routes static frontend traffic to frontend-service
+  # and API traffic to backend-service according to gateway/nginx.conf.
+  #
+  # Multi-node behavior is already enabled through replicas,
+  # topology spread, soft anti-affinity, and 19-gateway-pdb.yaml.
+  # Try this on a multi-node Kubernetes cluster to see gateway pods
+  # spread across nodes while ingress keeps one stable service target.
+  # ==========================================================
   revisionHistoryLimit: 3
+
+  # Two replicas keep the public entry path available during rollout
+  # or voluntary disruption.
   replicas: 2
+
+  # Updates gateway pods one at a time so ingress traffic keeps a
+  # healthy service target.
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
       maxSurge: 1
+
+  # Must match template.metadata.labels.app and 10-gateway-service.yaml.
   selector:
     matchLabels:
       app: nginx-gateway
@@ -18,11 +42,15 @@ spec:
     metadata:
       labels:
         app: nginx-gateway
+        # These labels make the gateway discoverable as one component
+        # of the larger sample-crud platform.
         app.kubernetes.io/component: gateway
         app.kubernetes.io/name: sample-crud
         app.kubernetes.io/part-of: sample-crud-platform
         app.kubernetes.io/managed-by: kubectl
     spec:
+      # Prefer placing gateway replicas on different nodes.
+      # ScheduleAnyway keeps development clusters from getting stuck.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -42,6 +70,9 @@ spec:
       containers:
         - name: nginx-gateway
           image: sample-crud-gateway:1.0.0
+
+          # Local image workflow. Build/load this image before apply.
           imagePullPolicy: Never
           ports:
+            # Ingress forwards to nginx-gateway-service on port 80.
             - containerPort: 80

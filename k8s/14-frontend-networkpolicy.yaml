@@ -4,6 +4,14 @@ metadata:
   name: frontend-network-policy
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # FRONTEND INGRESS POLICY
+  #
+  # Allows only the nginx gateway to reach frontend pods on port 80.
+  #
+  # Public users never connect to frontend pods directly. The ingress
+  # terminates entry traffic at the gateway service first.
+  # ==========================================================
   podSelector:
     matchLabels:
       app: frontend
@@ -13,6 +21,7 @@ spec:
 
   ingress:
     - from:
+        # Gateway serves the public app and forwards UI requests here.
         - podSelector:
             matchLabels:
               app: nginx-gateway

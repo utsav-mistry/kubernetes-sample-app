@@ -4,6 +4,18 @@ metadata:
   name: backend-hpa
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # BACKEND AUTOSCALING
+  #
+  # Scales 05-backend-deployment.yaml based on average CPU usage.
+  #
+  # Requirements:
+  # - metrics-server installed and working
+  # - backend container has CPU requests set
+  #
+  # minReplicas matches the current steady-state backend replica
+  # count so applying the HPA does not immediately scale down.
+  # ==========================================================
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment

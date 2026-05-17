@@ -4,6 +4,18 @@ metadata:
   name: gateway-network-policy
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # GATEWAY INGRESS POLICY
+  #
+  # Allows the cluster ingress controller to reach gateway pods
+  # on port 80.
+  #
+  # In k3s, Traefik normally runs in kube-system, so this policy
+  # allows traffic from that namespace.
+  #
+  # If the ingress controller runs in another namespace, update the
+  # namespaceSelector to match that controller.
+  # ==========================================================
   podSelector:
     matchLabels:
       app: nginx-gateway
@@ -13,6 +25,7 @@ spec:
 
   ingress:
     - from:
+        # k3s default Traefik namespace.
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system

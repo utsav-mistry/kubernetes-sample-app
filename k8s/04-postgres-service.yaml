@@ -4,6 +4,15 @@ metadata:
   name: postgres-headless
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # LEGACY POSTGRES HEADLESS SERVICE
+  #
+  # Required by the raw PostgreSQL StatefulSet so each pod gets a
+  # stable DNS identity such as:
+  # postgres-0.postgres-headless.sample-crud.svc.cluster.local
+  #
+  # This belongs to the old non-CNPG path only.
+  # ==========================================================
   clusterIP: None
   selector:
     app: postgres
@@ -18,6 +27,15 @@ metadata:
   name: postgres-rw
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # LEGACY WRITABLE POSTGRES SERVICE
+  #
+  # This ClusterIP selects only postgres-0.
+  #
+  # It gives the backend one stable service name for the raw
+  # StatefulSet path, but it does not provide automatic failover.
+  # CNPG's equivalent is postgres-cnpg-rw, used in 05.
+  # ==========================================================
   type: ClusterIP
   selector:
     app: postgres

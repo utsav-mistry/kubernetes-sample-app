@@ -4,6 +4,15 @@ metadata:
   name: sample-crud-local-ca
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # LOCAL CA ISSUER
+  #
+  # Uses the root CA secret created by 22-local-root-ca.yaml.
+  #
+  # 24-localhost-tls-certificate.yaml references this issuer to
+  # generate the ingress TLS certificate for local domains.
+  #
+  # This issuer is namespace-scoped to sample-crud.
+  # ==========================================================
   ca:
     secretName: sample-crud-root-ca-secret
-

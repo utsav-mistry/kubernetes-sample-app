@@ -4,6 +4,21 @@ metadata:
   name: sample-crud-localhost-tls
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # LOCAL INGRESS TLS CERTIFICATE
+  #
+  # cert-manager creates the sample-crud-localhost-tls secret used by
+  # 11-gateway-ingress.yaml.
+  #
+  # Covers:
+  # - https://localhost
+  # - https://sample-crud.local
+  #
+  # Requires:
+  # - 22-local-root-ca.yaml
+  # - 23-local-ca-issuer.yaml
+  # - /etc/hosts entry for sample-crud.local
+  # ==========================================================
   secretName: sample-crud-localhost-tls
   duration: 2160h
   renewBefore: 360h
@@ -32,5 +47,6 @@ spec:
     size: 2048
 
   issuerRef:
+    # Namespace-scoped local CA issuer from 23.
     name: sample-crud-local-ca
     kind: Issuer

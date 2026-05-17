@@ -1,4 +1,14 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  # ==========================================================
+  # APPLICATION NAMESPACE
+  #
+  # All application resources in this repository are placed in
+  # sample-crud so the stack can be applied, inspected, and
+  # cleaned up without mixing with cluster/system workloads.
+  #
+  # Most manifests depend on this namespace existing first.
+  # Apply this file before applying any numbered manifest after it.
+  # ==========================================================
   name: sample-crud

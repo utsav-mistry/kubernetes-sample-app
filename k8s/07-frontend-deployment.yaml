@@ -4,13 +4,36 @@ metadata:
   name: frontend
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # FRONTEND DEPLOYMENT
+  #
+  # Runs the compiled React/Vite frontend behind Nginx.
+  #
+  # The frontend is not exposed directly outside the cluster.
+  # Traffic path:
+  # browser -> Ingress -> nginx-gateway-service -> frontend-service
+  #
+  # The gateway owns public routing, TLS entry, and API proxying.
+  #
+  # Multi-node behavior is already enabled through replicas,
+  # topology spread, soft anti-affinity, and 18-frontend-pdb.yaml.
+  # Try this on a multi-node Kubernetes cluster to see frontend pods
+  # spread across nodes while still working on single-node clusters.
+  # ==========================================================
   revisionHistoryLimit: 3
+
+  # Two replicas let one frontend pod move or restart while one remains
+  # available for the gateway.
   replicas: 2
+
+  # Keeps frontend service available during image/config rollouts.
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
       maxSurge: 1
+
+  # Must match template.metadata.labels.app and 08-frontend-service.yaml.
   selector:
     matchLabels:
       app: frontend
@@ -18,11 +41,15 @@ spec:
     metadata:
       labels:
         app: frontend
+        # Standard app labels keep workloads easy to query as one
+        # platform while still separating frontend/backend/gateway.
         app.kubernetes.io/component: frontend
         app.kubernetes.io/name: sample-crud
         app.kubernetes.io/part-of: sample-crud-platform
         app.kubernetes.io/managed-by: kubectl
     spec:
+      # Spread frontend pods across nodes when multiple nodes exist.
+      # ScheduleAnyway keeps local single-node clusters usable.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -42,6 +69,10 @@ spec:
       containers:
         - name: frontend
           image: sample-crud-frontend:1.0.0
+
+          # Local image workflow. The image must already be loaded into
+          # the cluster runtime before applying this manifest.
           imagePullPolicy: Never
           ports:
+            # Nginx serves the built React app on port 80 inside the pod.
             - containerPort: 80

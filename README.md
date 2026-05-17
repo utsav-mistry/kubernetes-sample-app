@@ -4,8 +4,6 @@ A small full-stack task application packaged as a Kubernetes environment. The ap
 
 The Kubernetes manifests are the main material in this repo. They are numbered in apply order and include inline notes for how the pieces fit together.
 
-For a fresh-clone setup flow, including Kubernetes prerequisites, image loading, local TLS, and CNPG startup, see [docs/KUBERNETES_SETUP.md](docs/KUBERNETES_SETUP.md).
-
 ## What Is Included
 
 ```text
@@ -31,6 +29,22 @@ The current application path uses CloudNativePG for PostgreSQL:
 - `25` is the production Let's Encrypt ClusterIssuer template.
 
 Files `01` to `04` are kept as the legacy raw PostgreSQL StatefulSet path. The backend currently points to CNPG through `postgres-cnpg-rw`, as documented in `05-backend-deployment.yaml`.
+
+The current workload manifests already support multi-node behavior. Backend, frontend, and gateway deployments include replicas, topology spread constraints, pod anti-affinity, and PDBs. CNPG is configured with three PostgreSQL instances. A single-node cluster can run the stack, while a multi-node cluster makes the scheduling and availability rules easier to observe.
+
+## Reading Path
+
+Use this README to understand the shape of the repository. When you are ready to run the stack, follow the [Kubernetes Setup Guide](KUBERNETES_SETUP.md).
+
+The setup guide covers the full after-clone flow:
+
+- Kubernetes prerequisites
+- local image build and cluster image loading
+- local TLS and cert-manager setup
+- CNPG startup
+- verification commands
+- cleanup
+- follow-up experiments such as registry images, production TLS, multi-node scheduling, and CNPG failover
 
 ## Local Application Development
 
@@ -78,16 +92,16 @@ During local frontend development, Vite proxies `/api` requests to the backend. 
 VITE_API_PROXY_TARGET=http://127.0.0.1:5000 npm run dev
 ```
 
-## Kubernetes Spin Up
+## Kubernetes Spin Up Summary
 
-From the `k8s/` directory, the CNPG helper script applies the main stack in dependency order:
+The full Kubernetes workflow is documented in the [Kubernetes Setup Guide](KUBERNETES_SETUP.md). At a high level, the CNPG helper script applies the main stack in dependency order:
 
 ```bash
 cd k8s
 ./spin-up-cnpg.sh
 ```
 
-The script installs or confirms the CNPG operator, creates the database cluster, applies the workloads and policies, waits for rollouts, and prints final status.
+The script installs or confirms the CNPG operator, creates the database cluster, applies the workloads and policies, waits for rollouts, and prints final status. Build and load the local images before running it, because the manifests use local image tags with `imagePullPolicy: Never`.
 
 For local HTTPS with `sample-crud.local`, add this hosts entry:
 
@@ -96,3 +110,15 @@ For local HTTPS with `sample-crud.local`, add this hosts entry:
 ```
 
 Then use the local CA resources in `22` to `24` with the ingress configuration in `11`.
+
+## Working With The Manifests
+
+The manifests are meant to be read as much as applied. Start with the CNPG path, then change one concern at a time:
+
+- move images from local tags to a registry
+- switch from local TLS to the production issuer path
+- run the same manifests on a multi-node Kubernetes cluster and observe the existing spread, affinity, PDB, and CNPG placement behavior
+- test CNPG failover through `postgres-cnpg-rw`
+- adjust HPA, PDB, and NetworkPolicy settings and verify the effect
+
+The comments inside `k8s/` explain the coupling between files so changes stay intentional instead of accidental.

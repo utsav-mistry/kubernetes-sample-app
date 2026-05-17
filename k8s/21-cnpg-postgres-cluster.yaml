@@ -4,24 +4,54 @@ metadata:
   name: postgres-cnpg
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # CURRENT POSTGRESQL CLUSTER
+  #
+  # CloudNativePG manages this PostgreSQL cluster.
+  #
+  # Used by:
+  # - 05-backend-deployment.yaml via postgres-cnpg-rw
+  # - 20-cnpg-postgres-secret.yaml for app user credentials
+  #
+  # Why CNPG is preferred here:
+  # - manages primary/replica behavior
+  # - exposes stable read/write service names
+  # - handles failover better than the raw StatefulSet path
+  #
+  # Multi-node behavior:
+  # With three instances, CNPG can place PostgreSQL pods across nodes
+  # when the cluster and storage class support it. On a single-node
+  # cluster it still runs, but placement/failover behavior is easier
+  # to observe on a multi-node Kubernetes cluster.
+  #
+  # Try this on a multi-node cluster to watch replicas distribute and
+  # postgres-cnpg-rw continue pointing at the writable primary.
+  # ==========================================================
   instances: 3
 
+  # CNPG PostgreSQL image. Keep the major version aligned with
+  # application/database compatibility.
   imageName: ghcr.io/cloudnative-pg/postgresql:16
 
+  # Allows CNPG to move the primary automatically during updates.
   primaryUpdateStrategy: unsupervised
 
   storage:
+    # local-path is the default k3s storage class in many local labs.
     size: 1Gi
     storageClass: local-path
 
   bootstrap:
     initdb:
+      # Creates the initial database and owner on first cluster boot.
       database: sample_crud
       owner: sampleuser
       secret:
         name: postgres-app-user
 
   resources:
+    # Requests are used by scheduling and HPA-style capacity planning.
+    # Limits keep a single PostgreSQL pod from consuming the whole node.
     requests:
       cpu: "100m"
       memory: "256Mi"

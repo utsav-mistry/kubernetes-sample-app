@@ -4,14 +4,32 @@ metadata:
   name: postgres-network-policy
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # CURRENT CNPG POSTGRES INGRESS POLICY
+  #
+  # Locks CloudNativePG PostgreSQL pods for the active database path.
+  #
+  # Allows:
+  # - backend pods to connect to PostgreSQL on 5432
+  # - CNPG pods in this cluster to talk to each other on 5432
+  # - CNPG operator namespace to reach CNPG status and PostgreSQL ports
+  #
+  # Why operator access matters:
+  # CloudNativePG needs to reach every cluster pod on TCP 8000 for
+  # instance-manager status, and TCP 5432 for PostgreSQL operations.
+  #
+  # This policy selects CNPG-managed pods using the cluster label
+  # added by the operator.
+  # ==========================================================
   podSelector:
     matchLabels:
-      app: postgres
+      cnpg.io/cluster: postgres-cnpg
 
   policyTypes:
     - Ingress
 
   ingress:
+    # Application database traffic.
     - from:
         - podSelector:
             matchLabels:
@@ -19,3 +37,59 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+
+    # CNPG internal PostgreSQL traffic between cluster instances.
+    - from:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: postgres-cnpg
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # CNPG operator traffic from cnpg-system.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 5432
+
+# =====================================================================
+# LEGACY RAW POSTGRES STATEFULSET VERSION
+# =====================================================================
+#
+# Use this only when intentionally returning to:
+# - 01-postgres-secret.yaml
+# - 02-postgres-configmap.yaml
+# - 03-postgres-statefulset.yaml
+# - 04-postgres-service.yaml
+#
+# Do not use this while 05-backend-deployment.yaml points at CNPG.
+#
+# apiVersion: networking.k8s.io/v1
+# kind: NetworkPolicy
+# metadata:
+#   name: postgres-network-policy
+#   namespace: sample-crud
+# spec:
+#   podSelector:
+#     matchLabels:
+#       app: postgres
+#
+#   policyTypes:
+#     - Ingress
+#
+#   ingress:
+#     - from:
+#         - podSelector:
+#             matchLabels:
+#               app: backend
+#       ports:
+#         - protocol: TCP
+#           port: 5432
+#
+# =====================================================================

@@ -4,6 +4,15 @@ metadata:
   name: frontend-service
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # FRONTEND INTERNAL SERVICE
+  #
+  # Gives the gateway a stable DNS name for frontend pods.
+  #
+  # This remains ClusterIP because public users should reach the
+  # app through the gateway and ingress, not directly through the
+  # frontend deployment.
+  # ==========================================================
   type: ClusterIP
   selector:
     app: frontend

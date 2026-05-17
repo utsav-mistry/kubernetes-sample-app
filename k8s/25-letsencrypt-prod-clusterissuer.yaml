@@ -3,6 +3,22 @@ kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
 spec:
+  # ==========================================================
+  # PRODUCTION LET'S ENCRYPT ISSUER
+  #
+  # Cluster-wide issuer for public HTTPS certificates.
+  #
+  # Use this with the commented production ingress example in
+  # 11-gateway-ingress.yaml.
+  #
+  # Requirements:
+  # - cert-manager installed
+  # - public DNS pointing at the ingress/load balancer
+  # - reachable HTTP-01 challenge path from the internet
+  # - real email address below
+  #
+  # Do not use this for localhost certificates.
+  # ==========================================================
   acme:
     email: your-email@example.com
     server: https://acme-v02.api.letsencrypt.org/directory
@@ -11,4 +27,5 @@ spec:
     solvers:
       - http01:
           ingress:
+            # k3s default ingress controller.
             class: traefik

@@ -4,6 +4,18 @@ metadata:
   name: backend-service
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # BACKEND INTERNAL SERVICE
+  #
+  # Exposes backend pods inside the cluster on port 5000.
+  #
+  # Consumers:
+  # - nginx gateway reverse proxy
+  # - optional frontend-to-backend internal traffic
+  #
+  # This service is intentionally ClusterIP only. Public traffic
+  # enters through 11-gateway-ingress.yaml and then the gateway.
+  # ==========================================================
   type: ClusterIP
   selector:
     app: backend

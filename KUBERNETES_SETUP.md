@@ -1,8 +1,12 @@
 # Kubernetes Setup Guide
 
-This guide walks through running the repository from a fresh clone to a working Kubernetes deployment with CloudNativePG.
+This guide walks through running the repository from a fresh clone to a working Kubernetes, or k8s, deployment with CloudNativePG.
 
 The app is intentionally small. The useful part is the platform shape around it: local images, namespace isolation, CNPG PostgreSQL, internal services, gateway ingress, TLS, network policies, HPA, and PDBs.
+
+The `k8s/` directory is the main deployment surface of this repo. These manifests are written to be close to pipeline-ready: a CI/CD pipeline can build images, push them to a registry, update image references, and apply the manifests to a Kubernetes cluster. For a different cluster or environment, expect to change only the environment-specific parts such as image registry, image pull policy, ingress class, storage class, domain names, TLS issuer, and secret management.
+
+The current workload manifests already include multi-node friendly settings. Backend, frontend, and gateway deployments use multiple replicas, topology spread constraints, pod anti-affinity, and PodDisruptionBudgets. CNPG is configured with three PostgreSQL instances. On a single-node cluster these settings still apply, but on a multi-node Kubernetes cluster you can actually observe pods spreading across nodes and disruption budgets protecting availability during node maintenance. Try the same manifests on a multi-node cluster after the local setup; no separate multi-node manifest set is required.
 
 ## 1. Install Local Tools
 
@@ -11,14 +15,28 @@ Install these on the machine where you will run the cluster:
 - `git`
 - `docker`
 - `kubectl`
-- a local Kubernetes cluster, such as `k3s`, `k3d`, `kind`, or `minikube`
+- a local Kubernetes cluster, such as `kind`, `minikube`, `k3d`, or `k3s`
 - `cert-manager`, if you want the local trusted HTTPS flow
 
-This repo is currently tuned for a k3s-style local cluster:
+This repo is Kubernetes-first and should work on any conformant Kubernetes cluster, including local k8s clusters and remote/dev/staging clusters. A few manifest defaults currently match common k3s installations:
 
-- Traefik is used as the ingress controller.
+- Traefik is used as the ingress controller through `ingressClassName: traefik`.
 - `local-path` is used as the storage class for CNPG.
 - CNPG is installed by `k8s/spin-up-cnpg.sh`.
+
+If your cluster uses a different ingress class or storage class, update:
+
+- `k8s/11-gateway-ingress.yaml`
+- `k8s/21-cnpg-postgres-cluster.yaml`
+
+For CI/CD or remote Kubernetes environments, also update:
+
+- image names in `k8s/05-backend-deployment.yaml`
+- image names in `k8s/07-frontend-deployment.yaml`
+- image names in `k8s/09-gateway-deployment.yaml`
+- `imagePullPolicy` from `Never` to `IfNotPresent` or `Always`
+- TLS/domain settings in `k8s/11-gateway-ingress.yaml`
+- production issuer settings in `k8s/25-letsencrypt-prod-clusterissuer.yaml`
 
 Check cluster access:
 
@@ -28,7 +46,7 @@ kubectl get storageclass
 kubectl get ingressclass
 ```
 
-Expected local k3s-style values:
+Expected values with the manifests as written:
 
 - storage class: `local-path`
 - ingress class: `traefik`
@@ -36,7 +54,7 @@ Expected local k3s-style values:
 ## 2. Clone The Repo
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/utsav-mistry/kubernetes-sample-app.git
 cd kubernetes-sample-app
 ```
 
@@ -232,7 +250,25 @@ The image is not loaded into the cluster runtime. Rebuild the image, load it int
 
 `CreateContainerConfigError` on backend
 
-The backend environment references a missing secret or config. For the current CNPG path, `20-cnpg-postgres-secret.yaml` and `21-cnpg-postgres-cluster.yaml` must exist, and `05-backend-deployment.yaml` should point to `postgres-cnpg-rw`.
+The backend environment references a missing secret or config. Pick one database path and keep the backend manifest aligned with it.
+
+Current CNPG path:
+
+- apply `20-cnpg-postgres-secret.yaml`
+- apply `21-cnpg-postgres-cluster.yaml`
+- keep `05-backend-deployment.yaml` pointed at `postgres-cnpg-rw`
+- keep `12-postgres-networkpolicy.yaml` using the active CNPG selector
+
+Single Postgres StatefulSet path:
+
+- apply `01-postgres-secret.yaml`
+- apply `02-postgres-configmap.yaml`
+- apply `03-postgres-statefulset.yaml`
+- apply `04-postgres-service.yaml`
+- switch `05-backend-deployment.yaml` to the commented legacy database env block
+- switch `12-postgres-networkpolicy.yaml` to the commented legacy `app: postgres` policy
+
+Do not mix both backend database env blocks. If the backend points to a secret or config that was not applied, Kubernetes will stop the pod with `CreateContainerConfigError`.
 
 Ingress works but HTTPS shows an untrusted certificate
 
@@ -254,16 +290,30 @@ Install or fix metrics-server. HPA needs resource metrics and the backend deploy
 
 ## 10. Cleanup
 
-Remove the app namespace:
+When you are finished testing, remove the application namespace first. This deletes the app workloads, services, ingress, certificates, secrets, CNPG cluster object, and namespace-scoped storage claims created for this sample stack.
 
 ```bash
 kubectl delete namespace sample-crud
 ```
 
-Remove CNPG operator only if you do not need it for other clusters:
+Leave the CNPG operator installed if you plan to reuse it. Remove it only when this cluster no longer needs CloudNativePG for any database:
 
 ```bash
 kubectl delete namespace cnpg-system
 ```
 
-If you imported images into k3s, remove them manually only when you are done with local testing.
+If you imported images into a local cluster runtime, you can leave them in place for faster rebuild cycles or remove them manually when you are done with local testing.
+
+## What To Explore Next
+
+Once the stack is running, the useful next step is to change one platform concern at a time and observe the effect:
+
+- push images to a registry and switch deployments away from `imagePullPolicy: Never`
+- replace local TLS with the production issuer path in `11` and `25`
+- change the storage class in `21` for a different Kubernetes environment
+- run the same manifests on a multi-node Kubernetes cluster and watch the existing topology spread, pod anti-affinity, PDBs, and CNPG placement behave across nodes; this is already supported by the current manifests
+- test CNPG failover and watch `postgres-cnpg-rw` move to the new primary
+- tune backend replicas, HPA limits, and PDB values together
+- tighten or relax one NetworkPolicy at a time and verify traffic paths
+
+The manifests are deliberately numbered and commented so each piece can be applied, inspected, changed, and rolled back independently.

@@ -4,6 +4,18 @@ metadata:
   name: backend-network-policy
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # BACKEND INGRESS POLICY
+  #
+  # Allows only application-facing callers to reach backend pods
+  # on port 5000.
+  #
+  # Expected path:
+  # gateway -> backend-service -> backend pods
+  #
+  # frontend is also allowed for direct internal testing or future
+  # layouts where the frontend calls the backend service directly.
+  # ==========================================================
   podSelector:
     matchLabels:
       app: backend
@@ -13,9 +25,11 @@ spec:
 
   ingress:
     - from:
+        # Main production path: gateway proxies /api traffic.
         - podSelector:
             matchLabels:
               app: nginx-gateway
+        # Kept for direct in-cluster frontend-to-backend access.
         - podSelector:
             matchLabels:
               app: frontend

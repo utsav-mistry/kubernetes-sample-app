@@ -4,13 +4,42 @@ metadata:
   name: backend
   namespace: sample-crud
 spec:
+  # ==========================================================
+  # BACKEND DEPLOYMENT
+  #
+  # Runs the Express API that serves /api routes and connects to
+  # PostgreSQL.
+  #
+  # Current traffic path:
+  # browser -> Ingress -> nginx-gateway -> backend-service -> backend
+  #
+  # Current database path:
+  # backend -> postgres-cnpg-rw -> CloudNativePG primary
+  #
+  # This deployment is intentionally more production-shaped than a
+  # single demo pod: multiple replicas, rolling updates, probes,
+  # resource requests/limits, spreading, and anti-affinity.
+  #
+  # Try this on a multi-node Kubernetes cluster to see the current
+  # topology spread and anti-affinity rules place backend replicas
+  # across nodes instead of stacking everything on one node.
+  # ==========================================================
   revisionHistoryLimit: 3
+
+  # Baseline steady-state capacity. 16-backend-hpa.yaml keeps this
+  # same value as minReplicas and can scale up to 10 under CPU load.
   replicas: 5
+
+  # RollingUpdate keeps most API pods serving while a new image or
+  # configuration is rolled out.
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 1
       maxSurge: 1
+
+  # Must match template.metadata.labels.app so the Deployment manages
+  # only backend pods.
   selector:
     matchLabels:
       app: backend
@@ -18,11 +47,15 @@ spec:
     metadata:
         labels:
           app: backend
+          # Standard app labels make it easier to query the platform
+          # as a whole while still separating each component.
           app.kubernetes.io/name: sample-crud
           app.kubernetes.io/part-of: sample-crud-platform
           app.kubernetes.io/managed-by: kubectl
           app.kubernetes.io/component: backend
     spec:
+      # Spreads backend replicas across nodes when possible.
+      # ScheduleAnyway keeps local single-node clusters usable.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -30,6 +63,10 @@ spec:
           labelSelector:
             matchLabels:
               app: backend
+
+      # Prefer not to place backend pods on the same node.
+      # This is soft anti-affinity, so Kubernetes can still schedule
+      # pods when the cluster has too few nodes.
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -42,9 +79,17 @@ spec:
       containers:
         - name: backend
           image: sample-crud-backend:1.0.1
+
+          # Local image workflow. The image must already be built and
+          # loaded into the cluster runtime before applying this file.
+          # In a registry/pipeline flow, change this with the image tag.
           imagePullPolicy: Never
           ports:
             - containerPort: 5000
+
+          # Gives the app time to boot before liveness checks can
+          # restart it. This prevents slow startup from looking like
+          # a broken container.
           startupProbe:
             httpGet:
               path: /api/health
@@ -53,6 +98,9 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 12
+
+          # Confirms the API process is alive. If this fails repeatedly,
+          # Kubernetes restarts the container.
           livenessProbe:
             httpGet:
               path: /api/health
@@ -61,6 +109,10 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
+
+          # Requires database connectivity before the pod receives
+          # service traffic. This protects users from pods that started
+          # but cannot reach PostgreSQL(or configured DB) yet.
           readinessProbe:
             httpGet:
               path: /api/db-check
@@ -69,6 +121,9 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 2
+
+          # Requests support scheduling and HPA calculations.
+          # Limits prevent one backend pod from consuming the node.
           resources:
             requests:
               cpu: "100m"
@@ -76,6 +131,9 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+
+          # Runtime configuration consumed by backend/src/db.js and
+          # backend/src/server.js.
           env:
             - name: PORT
               value: "5000"

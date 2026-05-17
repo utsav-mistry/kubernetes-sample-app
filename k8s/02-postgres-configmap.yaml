@@ -3,6 +3,20 @@ kind: ConfigMap
 metadata:
   name: postgres-config
   namespace: sample-crud
+
+# ==========================================================
+# LEGACY RAW POSTGRES CONFIG
+#
+# This ConfigMap is consumed by 03-postgres-statefulset.yaml
+# through envFrom.
+#
+# Use it only with the raw PostgreSQL StatefulSet path.
+# CNPG creates and manages its own PostgreSQL cluster resources
+# from 20 and 21, so the current backend does not require this.
+# ==========================================================
 data:
   POSTGRES_DB: sample_crud
+
+  # PGDATA points PostgreSQL at a subdirectory inside the mounted
+  # PVC so the container can initialize cleanly on Kubernetes storage.
   PGDATA: /var/lib/postgresql/data/pgdata
