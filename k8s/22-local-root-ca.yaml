@@ -1,0 +1,33 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-root-issuer
+  namespace: sample-crud
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sample-crud-root-ca
+  namespace: sample-crud
+spec:
+  isCA: true
+  commonName: Sample CRUD Local Root CA
+  secretName: sample-crud-root-ca-secret
+  duration: 87600h
+  renewBefore: 720h
+  subject:
+    organizations:
+      - Utsav's Local Kubernetes Lab
+    organizationalUnits:
+      - Platform Engineering
+    countries:
+      - IN
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: selfsigned-root-issuer
+    kind: Issuer

@@ -1,0 +1,36 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sample-crud-localhost-tls
+  namespace: sample-crud
+spec:
+  secretName: sample-crud-localhost-tls
+  duration: 2160h
+  renewBefore: 360h
+
+  commonName: localhost
+
+  subject:
+    organizations:
+      - Utsav's Local Kubernetes Lab
+    organizationalUnits:
+      - DevOps Kubernetes Sprint
+    countries:
+      - IN
+    localities:
+      - Ahmedabad
+
+  dnsNames:
+    - localhost
+    - sample-crud.local
+
+  ipAddresses:
+    - 127.0.0.1
+
+  privateKey:
+    algorithm: RSA
+    size: 2048
+
+  issuerRef:
+    name: sample-crud-local-ca
+    kind: Issuer

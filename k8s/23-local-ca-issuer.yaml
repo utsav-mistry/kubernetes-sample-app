@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: sample-crud-local-ca
+  namespace: sample-crud
+spec:
+  ca:
+    secretName: sample-crud-root-ca-secret
+

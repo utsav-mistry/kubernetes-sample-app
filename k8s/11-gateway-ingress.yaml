@@ -1,12 +1,63 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: sample-crud-ingress
+  name: gateway-ingress
   namespace: sample-crud
+
+  annotations:
+    # ==========================================================
+    # LOCAL DEVELOPMENT TLS
+    #
+    # This ingress is currently configured for local trusted HTTPS.
+    #
+    # Requirements:
+    # - cert-manager installed
+    # - local CA issuer created
+    # - sample-crud-localhost-tls certificate exists
+    # - /etc/hosts contains:
+    #
+    #   127.0.0.1 sample-crud.local
+    #
+    # This gives:
+    # - https://localhost
+    # - https://sample-crud.local
+    #
+    # with locally trusted HTTPS after installing
+    # the root CA into Ubuntu/browser trust store.
+    # ==========================================================
+
 spec:
+  # k3s default ingress controller
   ingressClassName: traefik
+
+  # ==========================================================
+  # LOCAL TLS SECRET
+  #
+  # cert-manager generated this secret from:
+  # 24-localhost-tls-certificate.yaml
+  #
+  # This contains:
+  # - server certificate
+  # - private key
+  #
+  # Signed by:
+  # sample-crud-root-ca
+  # ==========================================================
+  tls:
+    - hosts:
+        - localhost
+        - sample-crud.local
+      secretName: sample-crud-localhost-tls
+
   rules:
-    - http:
+    # ==========================================================
+    # LOCALHOST ROUTING
+    #
+    # Browser:
+    # https://localhost
+    # ==========================================================
+    - host: localhost
+      http:
         paths:
           - path: /
             pathType: Prefix
@@ -15,3 +66,65 @@ spec:
                 name: nginx-gateway-service
                 port:
                   number: 80
+
+    # ==========================================================
+    # LOCAL CUSTOM DOMAIN ROUTING
+    #
+    # Browser:
+    # https://sample-crud.local
+    #
+    # Requires:
+    # /etc/hosts entry
+    # ==========================================================
+    - host: sample-crud.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-gateway-service
+                port:
+                  number: 80
+
+# =====================================================================
+# PRODUCTION VERSION (COMMENTED)
+# =====================================================================
+#
+# Replace LOCAL spec above with this production configuration
+# when deploying publicly.
+#
+# Requirements:
+# - real public domain
+# - public ingress/load balancer IP
+# - DNS A record
+# - cert-manager
+# - letsencrypt-prod ClusterIssuer
+#
+# Browser users WILL NOT need to install any certificates.
+#
+# metadata:
+#   annotations:
+#     cert-manager.io/cluster-issuer: letsencrypt-prod
+#
+# spec:
+#   ingressClassName: traefik
+#
+#   tls:
+#     - hosts:
+#         - app.yourdomain.com
+#       secretName: sample-crud-prod-tls
+#
+#   rules:
+#     - host: app.yourdomain.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: nginx-gateway-service
+#                 port:
+#                   number: 80
+#
+# =====================================================================

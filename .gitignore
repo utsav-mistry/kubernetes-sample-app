@@ -16,6 +16,7 @@ venv/
 .env.*
 kubeconfig*
 *.kubeconfig
+*.crt
 
 # real secrets only
 prod-secret*.yaml
