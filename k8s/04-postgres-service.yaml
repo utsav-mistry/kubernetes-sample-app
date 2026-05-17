@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: sample-crud
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-rw
+  namespace: sample-crud
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+    statefulset.kubernetes.io/pod-name: postgres-0
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

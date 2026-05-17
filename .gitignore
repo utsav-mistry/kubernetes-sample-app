@@ -1,0 +1,28 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+*.log
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.sqlite
+*.db
+
+# Kubernetes / local secrets
+.env
+.env.*
+kubeconfig*
+*.kubeconfig
+
+# real secrets only
+prod-secret*.yaml
+production-secret*.yaml
+real-secret*.yaml
+
+# Backups / dumps
+*.sql
+*.dump
+*.backup
