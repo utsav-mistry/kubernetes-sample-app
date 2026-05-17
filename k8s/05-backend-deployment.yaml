@@ -79,23 +79,82 @@ spec:
           env:
             - name: PORT
               value: "5000"
+            # ==========================================================
+            # Current CNPG configuration
+            #
+            # Use this when:
+            # - CloudNativePG operator is installed.
+            # - 20-cnpg-postgres-secret.yaml is applied.
+            # - 21-cnpg-postgres-cluster.yaml is applied.
+            # - The CNPG Cluster resource is named postgres-cnpg.
+            # - The backend should connect to HA PostgreSQL managed by CNPG.
+            #
+            # Why this is preferred:
+            # - postgres-cnpg-rw always points to the current writable primary.
+            # - CNPG manages primary/replica behavior.
+            # - Backend no longer depends on old postgres-secret/postgres-config.
+            # - Safe for CNPG failover and pod recreation.
+            # ==========================================================
+
             - name: DB_HOST
-              value: postgres-rw
+              value: postgres-cnpg-rw
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: postgres-config
-                  key: POSTGRES_DB
+              value: sample_crud
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_USER
+                  name: postgres-app-user
+                  key: username
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret
-                  key: POSTGRES_PASSWORD
+                  name: postgres-app-user
+                  key: password
 
+            # ==========================================================
+            # Legacy raw PostgreSQL StatefulSet configuration
+            #
+            # Use this ONLY when running the old PostgreSQL stack:
+            # - 01-postgres-secret.yaml
+            # - 02-postgres-configmap.yaml
+            # - 03-postgres-statefulset.yaml
+            # - 04-postgres-service.yaml
+            #
+            # Do NOT use this when CNPG is active.
+            #
+            # Why it is commented:
+            # During migration testing, backend pods hit:
+            # CreateContainerConfigError
+            #
+            # Root cause:
+            # Backend still referenced postgres-secret/postgres-config.
+            # After those legacy objects were deleted, new backend pods
+            # could not be created.
+            #
+            # To intentionally return to raw StatefulSet PostgreSQL:
+            # 1. Comment the CNPG DB_HOST/DB_NAME/DB_USER/DB_PASSWORD block above.
+            # 2. Uncomment the legacy block below.
+            # 3. Re-apply 01, 02, 03, and 04 manifests.
+
+            # - name: DB_HOST
+            #   value: postgres-rw
+            # - name: DB_PORT
+            #   value: "5432"
+            # - name: DB_NAME
+            #   valueFrom:
+            #     configMapKeyRef:
+            #       name: postgres-config
+            #       key: POSTGRES_DB
+            # - name: DB_USER
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: postgres-secret
+            #       key: POSTGRES_USER
+            # - name: DB_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: postgres-secret
+            #       key: POSTGRES_PASSWORD
+            # ==========================================================

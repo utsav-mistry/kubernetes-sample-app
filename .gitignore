@@ -26,3 +26,9 @@ real-secret*.yaml
 *.sql
 *.dump
 *.backup
+*.tar
+*.zip
+*.gz
+*.7z
+*.bak
+*.tar.gz
