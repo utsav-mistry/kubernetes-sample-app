@@ -3,6 +3,8 @@ dist/
 build/
 .env
 .env.*
+!.env.example
+!**/.env.example
 *.log
 __pycache__/
 *.pyc
@@ -13,7 +15,7 @@ venv/
 
 # Kubernetes / local secrets
 .env
-.env.*
+**/.env
 kubeconfig*
 *.kubeconfig
 *.crt
